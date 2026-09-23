@@ -53,14 +53,15 @@ re-released, re-read that bundle before editing `zswater_client/`.
   A 户号 visible in the mobile app / 小程序 is a different front-end with its own
   binding and does not show up here. Do not "fix" the empty case by changing the
   request, and keep `STEP_NO_ACCOUNT` in the flow so the user is told what to do.
-- Binding a 户号, if that ever needs implementing, is two verified calls:
-  `getMeterInfoByUId` with `{userID: 户号, meterName: 户名, code, meterIdCard,
-  meterPhone}` → take `data[0]`, then `addMeter/v2` with `{meterName: name,
-  meterNumber: userID, meterMobile: phone, meterAlert: 0, meterNick: "",
-  code, meterAddress: address}`. `code` on that form is the 图形验证码 value —
-  the one place the portal does render a captcha image
-  (`/iwater/nt/validateCode.json?timestamp=`) — and one other code path hardcodes
-  it to `"777777"`.
+- Binding a 户号 (`/#/queryInfo`, reached from the empty state's 「绑定户号」 or
+  from 综合查询 → 绑定户号). The form has four required fields — 户号, 户名,
+  手机号, 验证码 — and **no 图形验证码**; its `发送` button texts a code through
+  `sendAuthCode/v4`. Observed live sequence:
+  `sendAuthCode/v4` → `getMeterInfoByUId/v1` (`{userID, meterName, ...}`) →
+  `addMeter/v2` (`{meterName, meterNumber, meterMobile, meterAlert: 0,
+  meterNick: "", code, meterAddress}`). So `code` there is the **短信验证码**,
+  the same meaning it has on the login form. An earlier note in this file called
+  it a captcha value; that was wrong.
 
 ## Do not break
 
