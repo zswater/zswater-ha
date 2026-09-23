@@ -10,11 +10,13 @@ UI, which no unit test of the step's own logic would ever surface.
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
+from custom_components import zswater
 from custom_components.zswater import config_flow
 from custom_components.zswater.const import (
     CONF_ACCOUNT_NUMBER,
@@ -53,12 +55,31 @@ class FakeClient:
             )
         ]
 
+    async def async_get_meter_detail(self, *_a: Any, **_k: Any) -> None:
+        return None
+
+    async def async_get_readings(self, *_a: Any, **_k: Any) -> list[Any]:
+        return []
+
 
 class EmptyClient(FakeClient):
     """A portal account with nothing bound to it."""
 
     async def async_get_accounts(self) -> list[WaterAccount]:
         return []
+
+
+@pytest.fixture(autouse=True)
+def stub_integration_setup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stop Home Assistant from setting the entry up for real.
+
+    Finishing the wizard makes Home Assistant call ``async_setup_entry``, which
+    builds a real aiohttp session and with it a pycares resolver thread. The
+    harness's cleanup check then fails on the lingering thread, which is how
+    this test broke on CI while passing locally. What is under test here is the
+    wizard, not the coordinator.
+    """
+    monkeypatch.setattr(zswater, "async_setup_entry", AsyncMock(return_value=True))
 
 
 def _patch_client(monkeypatch: pytest.MonkeyPatch, cls: type[FakeClient]) -> None:
