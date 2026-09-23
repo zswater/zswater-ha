@@ -15,7 +15,6 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .captcha import async_register_captcha_view
 from .config import async_get_zswater_clientsession
 from .const import (
     CONF_AUTH_TOKEN,
@@ -33,9 +32,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
-    """Register the captcha endpoint used by the password login flow."""
+    """Prepare the integration's shared storage."""
     hass.data.setdefault(DOMAIN, {})
-    async_register_captcha_view(hass)
     return True
 
 

@@ -8,42 +8,17 @@
           "ip_family": "Network protocol"
         }
       },
-      "login_type": {
-        "title": "Login method",
-        "description": "The portal accepts any one of these three methods.",
-        "menu_options": {
-          "password_login": "Phone number and password (most reliable)",
-          "wechat_login": "WeChat (paste the unionid from the official account)",
-          "sms_register": "SMS code registration (no portal account yet)"
-        }
-      },
-      "password_login": {
-        "title": "Password login",
-        "description": "Sign in with your Zhongshan Water portal account.\n\n**Graphic captcha**: first [open the captcha image]({captcha_url}), then type the digits below. It is valid for 5 minutes and can only be viewed once; if you mistype it, just submit again to get a fresh one.",
+      "credentials": {
+        "title": "Sign in to Zhongshan Water",
+        "description": "Sign in with your portal account (or open the [web portal]({portal_url})).\n\nEnter your **phone number** and **password**. Submitting sends an SMS code to that number; the next screen asks for the code to finish signing in.",
         "data": {
           "account_number": "Phone number",
-          "password": "Password",
-          "captcha_code": "Graphic captcha"
+          "password": "Password"
         }
       },
-      "wechat_login": {
-        "title": "WeChat login",
-        "description": "1. Follow the 中山公用水务 official account in WeChat and open the portal via 在线服务 → 查询缴费 (or the [web portal]({portal_url})).\n2. Copy the part of the address bar that starts with `unionid=`.\n3. Paste it below — pasting the whole URL that contains `unionid=` works too.",
-        "data": {
-          "unionid": "unionid or full URL containing one"
-        }
-      },
-      "sms_register": {
-        "title": "SMS registration",
-        "description": "The portal does **not** support signing in with an SMS code alone; the code is only used to register an account.\n\nAn SMS code will be sent now. On the next screen, enter the code and your new password to finish registering and sign in automatically. Afterwards you can also use the password login.",
-        "data": {
-          "account_number": "Phone number",
-          "password": "Choose a password"
-        }
-      },
-      "sms_register_code": {
+      "sms_code": {
         "title": "Enter the SMS code",
-        "description": "A code was sent to {mobile}. Enter the 6-digit SMS code to finish registering.",
+        "description": "A code was sent to **{mobile}**. Enter it below.\n\nThe password is only checked at this point, so a wrong password also shows up here. If no code arrives, go back one step and submit again.",
         "data": {
           "sms_code": "SMS code"
         }
@@ -66,10 +41,9 @@
     },
     "error": {
       "cannot_connect": "Cannot reach the Zhongshan Water server. Check your network or try another network protocol.",
-      "invalid_auth": "Login failed: wrong phone number, password or captcha, or the account has no portal access.",
+      "invalid_auth": "Login failed: wrong phone number, password or SMS code, or the account has no portal access.",
       "unknown": "Unexpected error. Check the log for details.",
       "no_sms_code": "Could not send the SMS code. Make sure the phone number is registered with the utility.",
-      "captcha_invalid": "The graphic captcha is wrong or expired. Please enter it again.",
       "sms_code_invalid": "The SMS code is wrong or expired."
     },
     "abort": {
@@ -126,10 +100,9 @@
     },
     "error": {
       "cannot_connect": "Cannot reach the Zhongshan Water server. Check the network or pick another network protocol.",
-      "invalid_auth": "Sign-in failed: the phone number, password or captcha is wrong, or the account has no portal access.",
+      "invalid_auth": "Sign-in failed: the phone number, password or SMS code is wrong, or the account has no portal access.",
       "unknown": "Something went wrong. Check the log for details.",
       "no_sms_code": "The SMS code could not be sent. Make sure the phone number is registered with the portal.",
-      "captcha_invalid": "The graphic captcha is wrong or expired. Please enter it again.",
       "sms_code_invalid": "The SMS code is wrong or expired."
     },
     "abort": {

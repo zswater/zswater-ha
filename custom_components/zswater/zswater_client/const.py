@@ -41,7 +41,6 @@ DEFAULT_TIMEOUT = 30
 
 # ---------------------------------------------------------------- endpoints
 
-PATH_CAPTCHA = "/iwater/nt/validateCode.json"
 PATH_LOGIN = "/iwater/nt/wt/login.json"
 PATH_WECHAT_LOGIN = "/iwater/nt/wt/logining.json"
 PATH_SSO_LOGIN = "/iwater/sso/login.json"
@@ -66,8 +65,11 @@ PATH_ORDER_RECORD = "/iwater/meterpay/getOrderRecordDetail.json"
 # ---------------------------------------------------------------- sms codes
 
 #: ``type`` values accepted by ``PATH_SEND_AUTH_CODE``.
+#:
+#: The login form and the 户号 binding form both ask for ``SMS_TYPE_VERIFY``;
+#: registration asks for ``SMS_TYPE_REGISTER``.
 SMS_TYPE_REGISTER = 1
-SMS_TYPE_BIND_METER = 2
+SMS_TYPE_VERIFY = 2
 SMS_TYPE_GENERAL = 7
 
 # ------------------------------------------------------------- registration
@@ -87,16 +89,23 @@ STATUS_NOT_LOGGED_IN = 11
 
 
 class LoginType(StrEnum):
-    """How the stored auth token was obtained."""
+    """How the stored auth token was obtained.
+
+    The portal exposes three login routes, all confirmed in its own web client:
+
+    ``PASSWORD``
+        手机号 + 短信验证码 + 密码 → ``PATH_LOGIN``. The only route this
+        integration wires up; see ``config_flow``.
+    ``WECHAT``
+        微信 ``unionid`` → ``PATH_WECHAT_LOGIN``. The portal reads ``unionid``
+        out of its own redirect URL (``location.href.split("unionid=")[1]``),
+        which only happens when the site is entered from the 公众号 menu, so a
+        user cannot retrieve the value by hand.
+    ``SSO``
+        广东统一身份认证 → ``PATH_SSO_LOGIN``, exchanging ``ticket``/``sp``
+        from the ``tyrz.gd.gov.cn`` redirect.
+    """
 
     PASSWORD = "password"
     WECHAT = "wechat"
-    SMS = "sms"
-
-
-#: ``type`` field used by the portal when logging in, per login route.
-LOGIN_TYPE_DESCRIPTIONS: dict[str, str] = {
-    LoginType.PASSWORD: "手机号 + 密码 + 图形验证码",
-    LoginType.WECHAT: "微信 unionid（公众号/扫码）",
-    LoginType.SMS: "手机号 + 短信验证码（注册）",
-}
+    SSO = "sso"

@@ -8,42 +8,17 @@
           "ip_family": "网络协议"
         }
       },
-      "login_type": {
-        "title": "登录方式",
-        "description": "网上营业厅支持以下三种方式，任选其一。",
-        "menu_options": {
-          "password_login": "手机号密码登录（最稳定）",
-          "wechat_login": "微信扫码登录（用公众号里的 unionid）",
-          "sms_register": "短信验证码注册（还没有网上营业厅账号）"
-        }
-      },
-      "password_login": {
-        "title": "手机号密码登录",
-        "description": "使用中山公用水务网上营业厅的账号登录。\n\n**图形验证码**：先[点此查看验证码]({captcha_url})，再把它填到下面。验证码 5 分钟内有效，且只能查看一次；填错了重新提交即可刷新。",
+      "credentials": {
+        "title": "登录中山公用水务",
+        "description": "使用网上营业厅的账号登录（[网页版入口]({portal_url})）。\n\n请填写**手机号**和**密码**；提交后营业厅会向该手机号发送短信验证码，下一步填入验证码即可完成登录。",
         "data": {
           "account_number": "手机号",
-          "password": "密码",
-          "captcha_code": "图形验证码"
+          "password": "密码"
         }
       },
-      "wechat_login": {
-        "title": "微信扫码登录",
-        "description": "1. 在微信中关注「中山公用水务」公众号，点击菜单「在线服务」→「查询缴费」进入网上营业厅（[网页版入口]({portal_url})）。\n2. 复制地址栏中以 `unionid=` 开头的那一段参数值。\n3. 把它粘贴到下面（直接粘贴整条包含 `unionid=` 的网址也可以）。",
-        "data": {
-          "unionid": "unionid 或含 unionid 的完整网址"
-        }
-      },
-      "sms_register": {
-        "title": "短信验证码注册",
-        "description": "网上营业厅**不提供仅凭短信验证码登录**的功能，短信验证码只用于注册账号。\n\n这里会先给你发送一条短信验证码，下一步填写验证码和新密码即可完成注册并自动登录；之后也可以改用「手机号密码登录」。",
-        "data": {
-          "account_number": "手机号",
-          "password": "设置密码"
-        }
-      },
-      "sms_register_code": {
+      "sms_code": {
         "title": "输入短信验证码",
-        "description": "验证码已发送至 {mobile}，请填写收到的 6 位短信验证码完成注册。",
+        "description": "验证码已发送至 **{mobile}**，请填入收到的短信验证码。\n\n登录时才会校验密码，因此密码不正确也会在这一步报错。若一直收不到验证码，请返回上一步重新提交。",
         "data": {
           "sms_code": "短信验证码"
         }
@@ -69,7 +44,6 @@
       "invalid_auth": "登录失败：账号、密码或验证码不正确，或账号未开通网上营业厅。",
       "unknown": "发生未知错误，请查看日志获取详细信息。",
       "no_sms_code": "短信验证码发送失败，请确认手机号已在营业厅登记。",
-      "captcha_invalid": "图形验证码不正确或已过期，请重新填写。",
       "sms_code_invalid": "短信验证码不正确或已过期。"
     },
     "abort": {
@@ -129,7 +103,6 @@
       "invalid_auth": "登录失败：账号、密码或验证码不正确，或账号未开通网上营业厅。",
       "unknown": "发生未知错误，请查看日志获取详细信息。",
       "no_sms_code": "短信验证码发送失败，请确认手机号已在营业厅登记。",
-      "captcha_invalid": "图形验证码不正确或已过期，请重新填写。",
       "sms_code_invalid": "短信验证码不正确或已过期。"
     },
     "abort": {

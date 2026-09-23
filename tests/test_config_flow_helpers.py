@@ -28,7 +28,6 @@ const = importlib.import_module(f"{PACKAGE}.const")
 def test_every_module_imports() -> None:
     for module in (
         PACKAGE,
-        f"{PACKAGE}.captcha",
         f"{PACKAGE}.config",
         f"{PACKAGE}.config_flow",
         f"{PACKAGE}.const",
@@ -66,42 +65,40 @@ def test_sensor_unique_ids_are_distinct() -> None:
     assert len(keys) == len(set(keys))
 
 
+def test_login_walks_the_portals_own_form() -> None:
+    """The login is 手机号 + 密码, then the 短信验证码 the portal texts.
+
+    No menu: the previous revision offered three routes, of which the captcha
+    one did not exist and the other two needed values a user cannot obtain.
+    """
+    assert not hasattr(config_flow.ZSWaterConfigFlow, "async_step_login_type")
+    for step in (const.STEP_USER, const.STEP_CREDENTIALS, const.STEP_SMS_CODE):
+        assert hasattr(config_flow.ZSWaterConfigFlow, f"async_step_{step}"), step
+
+
 @pytest.mark.parametrize(
-    ("raw", "expected"),
+    "removed",
     [
-        ("oABC-123_def", "oABC-123_def"),
-        ("  oABC-123_def  ", "oABC-123_def"),
-        (
-            "https://smartbi.zsws.com.cn/?unionid=oABC-123_def#/wechatLogin",
-            "oABC-123_def",
-        ),
-        (
-            "https://smartbi.zsws.com.cn/?unionid=oABC%2D123#/wechatLogin",
-            "oABC-123",
-        ),
-        ("UNIONID=oXYZ#/home", "oXYZ"),
+        "async_get_captcha",
+        "_async_prepare_captcha",
+        "CONF_CAPTCHA_CODE",
+        "STEP_PASSWORD_LOGIN",
+        "STEP_WECHAT_LOGIN",
+        "STEP_SMS_REGISTER",
+        "LOGIN_MENU_OPTIONS",
+        "_extract_unionid",
+        "SMS_TYPE_BIND_METER",
     ],
 )
-def test_extract_unionid_accepts_bare_values_and_urls(raw: str, expected: str) -> None:
-    assert config_flow._extract_unionid(raw) == expected
+def test_removed_login_machinery_stays_removed(removed: str) -> None:
+    """Guards the reversal of the wrong login design.
 
-
-def test_login_menu_offers_one_option_per_login_type() -> None:
-    """Every supported login route has to be reachable from the menu."""
-    assert set(const.LOGIN_MENU_OPTIONS) == {
-        const.STEP_PASSWORD_LOGIN,
-        const.STEP_WECHAT_LOGIN,
-        const.STEP_SMS_REGISTER,
-    }
-    assert len(const.LOGIN_MENU_OPTIONS) == 3
-
-
-#: Menu option ids double as step ids and as translation keys; the generic
-#: checks for that live in ``test_flow_translations.py``.
-def test_login_menu_options_are_step_ids() -> None:
-    for option in const.LOGIN_MENU_OPTIONS:
-        assert option.startswith(("password_", "wechat_", "sms_"))
-        assert hasattr(config_flow.ZSWaterConfigFlow, f"async_step_{option}")
+    The portal's login form is 手机号 + 短信验证码 + 密码; an earlier revision
+    invented a 图形验证码 step and two unusable routes instead.
+    """
+    for filename in ("const.py", "config_flow.py"):
+        source = (COMPONENT_DIR / PACKAGE / filename).read_text(encoding="utf-8")
+        assert removed not in source, f"{removed} came back in {filename}"
 
 
 def test_account_label_includes_every_known_field() -> None:

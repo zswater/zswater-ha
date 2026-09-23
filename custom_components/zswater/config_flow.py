@@ -1,33 +1,37 @@
 """Config flow for the Zhongshan Water integration.
 
-Login routes
-------------
-The portal offers three ways in, and all three are implemented here because
-they fail in different situations:
+Login
+-----
+One route, mirroring the portal's own login card field for field::
 
-``password``
-    手机号 + 密码 + 图形验证码 (``/iwater/nt/wt/login.json``). The captcha is a
-    server-rendered image, so it is fetched, parked behind a one-shot URL by
-    :mod:`custom_components.zswater.captcha` and linked from the form.
+    手机号  [获取手机验证码]      →  GET /iwater/v1/usercenter/nt/sendAuthCode/v4.json
+    手机验证码  (form field "code")
+    密码                         →  POST /iwater/nt/wt/login.json
+
+An earlier revision of this file asked for a 图形验证码 instead. That was wrong:
+the portal's login form does not render one. Its ``captchaUrl``/``keyDate``
+state is dead code — the render evaluates ``this.state.captchaUrl;`` and never
+places an image — while the fields it really draws are ``meterPhone``, the
+``code`` input whose placeholder is 请输入手机验证码, and ``password``. The SMS
+button posts ``{mobile, type: 2}``.
+
+Two further routes exist in the portal but are deliberately not offered:
+
 ``wechat``
-    微信 ``unionid`` (``/iwater/nt/wt/logining.json``). Arriving at the portal
-    from the 中山公用水务 公众号 leaves a ``unionid`` in the address bar; pasting
-    either that value or the whole URL logs the entry in.
-``sms``
-    手机号 + 短信验证码 + 密码 (``/iwater/iwaterapi/nt.json``). The portal has no
-    SMS-only *login*; the code is used to create the account, after which the
-    new password can be used with the ``password`` route.
+    微信 ``unionid`` (``/iwater/nt/wt/logining.json``). The portal reads the
+    value out of its own redirect URL, so it is only ever present when the site
+    is entered from the 公众号 menu; there is no way for a user to look it up.
+``sso``
+    广东统一身份认证 (``/iwater/sso/login.json``), exchanging the ``ticket``
+    and ``sp`` a ``tyrz.gd.gov.cn`` redirect appends.
 """
 
 from __future__ import annotations
 
 import logging
-import re
 import socket
 import time
 from typing import Any
-from urllib.parse import unquote
-from uuid import uuid4
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
@@ -37,7 +41,6 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .captcha import async_store_captcha
 from .config import (
     get_configured_history_days,
     get_configured_ip_family,
@@ -46,9 +49,7 @@ from .config import (
 from .const import (
     ABORT_ALL_ADDED,
     ABORT_NO_ACCOUNT,
-    CAPTCHA_URL_TEMPLATE,
     CONF_ACCOUNT_NUMBER,
-    CONF_CAPTCHA_CODE,
     CONF_HISTORY_DAYS,
     CONF_IP_FAMILY,
     CONF_LOGIN_TYPE,
@@ -56,7 +57,6 @@ from .const import (
     CONF_METER_NUMBER,
     CONF_METER_PHONE,
     CONF_SMS_CODE,
-    CONF_UNIONID,
     CONF_UPDATE_INTERVAL,
     CONF_UPDATED_AT,
     CONF_WATER_ACCOUNTS,
@@ -65,32 +65,26 @@ from .const import (
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
     ERROR_CANNOT_CONNECT,
-    ERROR_CAPTCHA_INVALID,
     ERROR_INVALID_AUTH,
     ERROR_NO_SMS_CODE,
     ERROR_SMS_CODE_INVALID,
     ERROR_UNKNOWN,
     IP_FAMILY_OPTIONS,
-    LOGIN_MENU_OPTIONS,
     MIN_UPDATE_INTERVAL,
     PORTAL_URL,
     SETTING_UPDATE_TIMEOUT,
     STEP_ADD_ACCOUNT,
     STEP_ADD_ACCOUNT_VERIFY,
+    STEP_CREDENTIALS,
     STEP_INIT,
-    STEP_LOGIN_TYPE,
-    STEP_PASSWORD_LOGIN,
     STEP_SETTINGS,
-    STEP_SMS_REGISTER,
-    STEP_SMS_REGISTER_CODE,
+    STEP_SMS_CODE,
     STEP_USER,
-    STEP_WECHAT_LOGIN,
 )
 from .coordinator import ZSWaterCoordinator
 from .zswater_client import (
     LoginType,
-    SMS_TYPE_BIND_METER,
-    SMS_TYPE_REGISTER,
+    SMS_TYPE_VERIFY,
     WaterAccount,
     ZSWaterApiError,
     ZSWaterAuthError,
@@ -105,18 +99,6 @@ _IP_FAMILY_TO_SOCKET: dict[str, int] = {
     "ipv4": socket.AF_INET,
     "ipv6": socket.AF_INET6,
 }
-
-#: Matches a ``unionid`` either bare or embedded in a pasted portal URL.
-_UNIONID_RE = re.compile(r"unionid=([A-Za-z0-9_\-%]+)", re.IGNORECASE)
-
-
-def _extract_unionid(value: str) -> str:
-    """Accept a bare ``unionid`` or a pasted URL containing one."""
-    text = value.strip()
-    match = _UNIONID_RE.search(text)
-    if match:
-        return unquote(match.group(1))
-    return text
 
 
 def _account_label(account: WaterAccount) -> str:
@@ -141,8 +123,6 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
         self._mobile: str | None = None
         self._reauth_entry: ConfigEntry | None = None
         self._is_reconfigure: bool = False
-        self._captcha_timestamp: str = ""
-        self._captcha_url: str = ""
         self._pending_password: str | None = None
 
     # ------------------------------------------------------------ helpers
@@ -153,30 +133,6 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
             self.hass, family=_IP_FAMILY_TO_SOCKET.get(self._ip_family, socket.AF_UNSPEC)
         )
         return ZSWaterClient(session, timeout=SETTING_UPDATE_TIMEOUT)
-
-    def _captcha_link(self, token: str) -> str:
-        """Absolute URL for the parked captcha image, when we know the origin."""
-        path = CAPTCHA_URL_TEMPLATE.format(token=token)
-        base = self.hass.config.external_url or self.hass.config.internal_url
-        return f"{base}{path}" if base else path
-
-    async def _async_prepare_captcha(self) -> None:
-        """Fetch a fresh 图形验证码 and park it behind a one-shot URL.
-
-        The portal binds the image to the millisecond timestamp it was drawn
-        with, so the two are always produced together and the timestamp is kept
-        on the flow for the login call.
-        """
-        self._captcha_url = ""
-        self._captcha_timestamp = str(int(time.time() * 1000))
-        try:
-            image = await self._new_client().async_get_captcha(self._captcha_timestamp)
-        except ZSWaterError as err:
-            _LOGGER.warning("图形验证码获取失败: %s", err)
-            return
-        token = uuid4().hex
-        async_store_captcha(self.hass, token, image)
-        self._captcha_url = self._captcha_link(token)
 
     async def _async_finish_login(self) -> FlowResult:
         """Continue to 户号 selection, or write the refreshed token on reauth."""
@@ -207,7 +163,7 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
         """Step 1 — pick the network address family before logging in."""
         if user_input is not None:
             self._ip_family = user_input[CONF_IP_FAMILY]
-            return await self.async_step_login_type()
+            return await self.async_step_credentials()
         return self.async_show_form(
             step_id=STEP_USER,
             data_schema=vol.Schema(
@@ -220,122 +176,19 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"portal_url": PORTAL_URL},
         )
 
-    async def async_step_login_type(
+    async def async_step_credentials(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Step 2 — pick how to authenticate.
-
-        The step body ignores ``user_input``: Home Assistant consumes a menu
-        choice in ``data_entry_flow`` and calls ``async_step_<next_step_id>``
-        directly, so dispatching here as well would be unreachable code.
-        """
-        return self.async_show_menu(
-            step_id=STEP_LOGIN_TYPE,
-            menu_options=list(LOGIN_MENU_OPTIONS),
-        )
-
-    async def async_step_password_login(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """手机号 + 密码 + 图形验证码."""
+        """Step 2 — 手机号 + 密码; submitting texts a 短信验证码 and moves on."""
         errors: dict[str, str] = {}
         if user_input is not None:
             client = self._new_client()
+            mobile = user_input[CONF_ACCOUNT_NUMBER]
             try:
-                await client.async_login_with_password(
-                    user_input[CONF_ACCOUNT_NUMBER],
-                    user_input[CONF_PASSWORD],
-                    user_input[CONF_CAPTCHA_CODE],
-                    self._captcha_timestamp,
-                )
-            except (ZSWaterAuthError, ZSWaterApiError) as err:
-                errors["base"] = ERROR_INVALID_AUTH
-                errors[CONF_CAPTCHA_CODE] = ERROR_CAPTCHA_INVALID
-                _LOGGER.debug("密码登录被拒: %s", err)
-            except ZSWaterTransportError:
-                errors["base"] = ERROR_CANNOT_CONNECT
-            except ZSWaterError as err:
-                errors["base"] = ERROR_UNKNOWN
-                _LOGGER.exception("密码登录异常: %s", err)
-            else:
-                self._client = client
-                self._mobile = user_input[CONF_ACCOUNT_NUMBER]
-                self._login_type = LoginType.PASSWORD
-                return await self._async_finish_login()
-
-        await self._async_prepare_captcha()
-        if not self._captcha_url and not errors:
-            # Say why the captcha link is absent, instead of rendering a dead one.
-            errors["base"] = ERROR_CANNOT_CONNECT
-        return self.async_show_form(
-            step_id=STEP_PASSWORD_LOGIN,
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_ACCOUNT_NUMBER, default=self._mobile or ""): str,
-                    vol.Required(CONF_PASSWORD): str,
-                    vol.Required(CONF_CAPTCHA_CODE): str,
-                }
-            ),
-            errors=errors,
-            description_placeholders={"captcha_url": self._captcha_url},
-        )
-
-    async def async_step_wechat_login(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """微信 unionid —— the route the 公众号 uses."""
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            unionid = _extract_unionid(user_input[CONF_UNIONID])
-            client = self._new_client()
-            try:
-                data = await client.async_login_with_unionid(unionid)
-            except ZSWaterAuthError:
-                errors["base"] = ERROR_INVALID_AUTH
-            except ZSWaterTransportError:
-                errors["base"] = ERROR_CANNOT_CONNECT
-            except ZSWaterApiError as err:
-                errors["base"] = ERROR_INVALID_AUTH
-                _LOGGER.debug("unionid 登录被拒: %s", err)
-            except ZSWaterError as err:
-                errors["base"] = ERROR_UNKNOWN
-                _LOGGER.exception("unionid 登录异常: %s", err)
-            else:
-                self._client = client
-                self._mobile = self._mobile_from_payload(data) or unionid
-                self._login_type = LoginType.WECHAT
-                return await self._async_finish_login()
-
-        return self.async_show_form(
-            step_id=STEP_WECHAT_LOGIN,
-            data_schema=vol.Schema({vol.Required(CONF_UNIONID): str}),
-            errors=errors,
-            description_placeholders={"portal_url": PORTAL_URL},
-        )
-
-    @staticmethod
-    def _mobile_from_payload(data: Any) -> str | None:
-        """Read the phone number out of a login response when the portal sends one."""
-        if not isinstance(data, dict):
-            return None
-        mobile = data.get("mobile")
-        if not mobile:
-            user_info = data.get("userInfo")
-            if isinstance(user_info, dict):
-                mobile = user_info.get("usermobile") or user_info.get("mobile")
-        return str(mobile) if mobile else None
-
-    async def async_step_sms_register(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """手机号 + 密码 → send a 短信验证码 for a new account."""
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            client = self._new_client()
-            try:
-                await client.async_send_sms_code(
-                    user_input[CONF_ACCOUNT_NUMBER], SMS_TYPE_REGISTER
-                )
+                # The portal has no separate "check the password" call, so the
+                # code is requested against the phone number and the password is
+                # only verified when the code is submitted.
+                await client.async_send_sms_code(mobile, SMS_TYPE_VERIFY)
             except ZSWaterTransportError:
                 errors["base"] = ERROR_CANNOT_CONNECT
             except ZSWaterError as err:
@@ -343,53 +196,61 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.warning("短信验证码发送失败: %s", err)
             else:
                 self._client = client
-                self._mobile = user_input[CONF_ACCOUNT_NUMBER]
+                self._mobile = mobile
+                # Held only for the lifetime of the flow: the portal verifies
+                # the password when the code is submitted, not before.
                 self._pending_password = user_input[CONF_PASSWORD]
-                return await self.async_step_sms_register_code()
+                return await self.async_step_sms_code()
 
         return self.async_show_form(
-            step_id=STEP_SMS_REGISTER,
+            step_id=STEP_CREDENTIALS,
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_ACCOUNT_NUMBER): str,
+                    vol.Required(CONF_ACCOUNT_NUMBER, default=self._mobile or ""): str,
                     vol.Required(CONF_PASSWORD): str,
                 }
             ),
             errors=errors,
+            description_placeholders={"portal_url": PORTAL_URL},
         )
 
-    async def async_step_sms_register_code(
+    async def async_step_sms_code(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """短信验证码 → create the account, which also logs us in."""
+        """Step 3 — 短信验证码, submitted together with the password."""
         errors: dict[str, str] = {}
+        assert self._client is not None
+        assert self._mobile is not None
+
         if user_input is not None:
-            assert self._client is not None
-            assert self._mobile is not None
             try:
-                await self._client.async_register(
+                await self._client.async_login(
                     self._mobile,
                     self._pending_password or "",
                     user_input[CONF_SMS_CODE],
+                    # The portal's form keeps a millisecond timestamp beside its
+                    # (unrendered) captcha state and posts it with the login; a
+                    # fresh one is just as acceptable to the endpoint.
+                    int(time.time() * 1000),
                 )
             except (ZSWaterAuthError, ZSWaterApiError) as err:
                 errors["base"] = ERROR_INVALID_AUTH
                 errors[CONF_SMS_CODE] = ERROR_SMS_CODE_INVALID
-                _LOGGER.debug("注册被门户拒绝: %s", err)
+                _LOGGER.debug("登录被门户拒绝: %s", err)
             except ZSWaterTransportError:
                 errors["base"] = ERROR_CANNOT_CONNECT
             except ZSWaterError as err:
                 errors["base"] = ERROR_UNKNOWN
-                _LOGGER.exception("注册异常: %s", err)
+                _LOGGER.exception("登录异常: %s", err)
             else:
-                self._login_type = LoginType.SMS
+                self._login_type = LoginType.PASSWORD
                 return await self._async_finish_login()
 
         return self.async_show_form(
-            step_id=STEP_SMS_REGISTER_CODE,
+            step_id=STEP_SMS_CODE,
             data_schema=vol.Schema({vol.Required(CONF_SMS_CODE): str}),
             errors=errors,
-            description_placeholders={"mobile": self._mobile or ""},
+            description_placeholders={"mobile": self._mobile},
         )
 
     async def async_step_init(
@@ -470,7 +331,7 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
         self._reauth_entry = entry
         self._ip_family = get_configured_ip_family(entry)
         self._mobile = entry.data.get(CONF_ACCOUNT_NUMBER)
-        return await self.async_step_login_type()
+        return await self.async_step_credentials()
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
@@ -481,7 +342,7 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
         self._is_reconfigure = True
         self._ip_family = get_configured_ip_family(entry)
         self._mobile = entry.data.get(CONF_ACCOUNT_NUMBER)
-        return await self.async_step_login_type()
+        return await self.async_step_credentials()
 
 
 class ZSWaterOptionsFlow(OptionsFlow):
@@ -615,7 +476,7 @@ class ZSWaterOptionsFlow(OptionsFlow):
                 }
                 try:
                     await self._coordinator.client.async_send_sms_code(
-                        phone, SMS_TYPE_BIND_METER
+                        phone, SMS_TYPE_VERIFY
                     )
                 except ZSWaterError as err:
                     errors["base"] = ERROR_NO_SMS_CODE

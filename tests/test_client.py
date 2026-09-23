@@ -19,9 +19,11 @@ from zswater_client import ZSWaterClient, md5_hex  # noqa: E402
 from zswater_client.const import (  # noqa: E402
     APP_VERSION,
     BASE_URL,
+    PATH_LOGIN,
     PATH_METER_LIST,
     PATH_PAY_HISTORY,
     PATH_SEND_AUTH_CODE,
+    SMS_TYPE_VERIFY,
     STATUS_NOT_LOGGED_IN,
 )
 from zswater_client.exceptions import (  # noqa: E402
@@ -144,7 +146,7 @@ async def test_get_uses_a_request_para_query_parameter() -> None:
     assert call["url"] == f"{BASE_URL}{PATH_SEND_AUTH_CODE}"
     payload = json.loads(call["params"]["requestPara"])
     assert payload["mobile"] == "13800000000"
-    assert payload["type"] == 1
+    assert payload["type"] == SMS_TYPE_VERIFY
     assert payload["token"] is None
 
 
@@ -189,7 +191,8 @@ async def test_non_json_body_is_a_transport_error() -> None:
 
 
 @pytest.mark.asyncio
-async def test_password_login_adopts_userinfo_token() -> None:
+async def test_login_posts_the_portal_form_and_adopts_the_token() -> None:
+    """``code`` carries the 短信验证码, matching the portal's own login form."""
     session = FakeSession(
         {
             "status": 0,
@@ -198,9 +201,10 @@ async def test_password_login_adopts_userinfo_token() -> None:
     )
     client = ZSWaterClient(session)
 
-    await client.async_login_with_password("13800000000", "123456", "8421", "1700000000000")
+    await client.async_login("13800000000", "123456", "8421", "1700000000000")
 
     assert client.token == "NEW-TOKEN"
+    assert session.calls[0]["url"] == f"{BASE_URL}{PATH_LOGIN}"
     payload = json.loads(session.calls[0]["data"].removeprefix("requestPara="))
     assert payload["meterPhone"] == "13800000000"
     assert payload["userName"] == "13800000000"
@@ -210,12 +214,25 @@ async def test_password_login_adopts_userinfo_token() -> None:
 
 
 @pytest.mark.asyncio
+async def test_login_omits_the_timestamp_when_not_supplied() -> None:
+    """The timestamp is optional; the endpoint must not receive a null."""
+    session = FakeSession({"status": 0, "data": {"userInfo": {"token": "T"}}})
+    client = ZSWaterClient(session)
+
+    await client.async_login("13800000000", "pw", "8421")
+
+    payload = json.loads(session.calls[0]["data"].removeprefix("requestPara="))
+    assert "timestamp" not in payload
+    assert payload["code"] == "8421"
+
+
+@pytest.mark.asyncio
 async def test_login_without_a_token_fails_loudly() -> None:
     session = FakeSession({"status": 0, "data": {"userInfo": {}}})
     client = ZSWaterClient(session)
 
     with pytest.raises(ZSWaterAuthError):
-        await client.async_login_with_password("13800000000", "pw", "1", "1")
+        await client.async_login("13800000000", "pw", "1", "1")
 
 
 @pytest.mark.asyncio
@@ -247,11 +264,16 @@ async def test_reading_history_window_is_yyyymmdd() -> None:
 
 
 @pytest.mark.asyncio
-async def test_captcha_returns_raw_bytes() -> None:
-    session = FakeSession()
+async def test_login_code_request_uses_the_verify_type() -> None:
+    """The portal's login form asks for its code with ``type: 2``."""
+    session = FakeSession({"status": 0, "data": {"message": "验证码发送成功"}})
     client = ZSWaterClient(session)
 
-    image = await client.async_get_captcha("1700000000000")
+    message = await client.async_send_sms_code("13800000000", SMS_TYPE_VERIFY)
 
-    assert image.startswith(b"\x89PNG")
-    assert session.calls[0]["params"] == {"timestamp": "1700000000000"}
+    assert message == "验证码发送成功"
+    assert session.calls[0]["method"] == "GET"
+    assert session.calls[0]["url"] == f"{BASE_URL}{PATH_SEND_AUTH_CODE}"
+    payload = json.loads(session.calls[0]["params"]["requestPara"])
+    assert payload["mobile"] == "13800000000"
+    assert payload["type"] == 2

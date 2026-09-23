@@ -12,8 +12,7 @@ billing. Independent, unofficial client — not affiliated with the utility.
 |------|------|
 | `custom_components/zswater/__init__.py` | Entry setup/unload, update listener, device removal |
 | `custom_components/zswater/config.py` | Read IP family / interval / history window; bound HA `ClientSession` |
-| `custom_components/zswater/config_flow.py` | Network step, three login routes, options (add/bind 户号, settings), reauth |
-| `custom_components/zswater/captcha.py` | One-shot HTTP endpoint serving 图形验证码 images to the login form |
+| `custom_components/zswater/config_flow.py` | Network step, login (手机号/密码/短信验证码), options (add/bind 户号, settings), reauth |
 | `custom_components/zswater/coordinator.py` | `ZSWaterCoordinator` |
 | `custom_components/zswater/sensor.py` | `_SENSOR_DEFINITIONS` table and entities |
 | `custom_components/zswater/binary_sensor.py` | 欠费状态 |
@@ -27,9 +26,9 @@ billing. Independent, unofficial client — not affiliated with the utility.
 | `custom_components/zswater/translations/en.json` | English |
 | `tests/` | Behaviour tests; do not change them to accommodate a refactor |
 
-Data flow: pick IP family → one of three login routes → write token into the
-config entry → coordinator fetches on the refresh interval → `_SENSOR_DEFINITIONS`
-creates entities.
+Data flow: pick IP family → 手机号 + 密码 → portal texts a 短信验证码 → submit it
+to log in → write token into the config entry → coordinator fetches on the
+refresh interval → `_SENSOR_DEFINITIONS` creates entities.
 
 ## Protocol facts (do not re-derive from scratch)
 
@@ -52,17 +51,22 @@ re-released, re-read that bundle before editing `zswater_client/`.
 
 Write rules. Read the source files. Do not copy lists or numbers into this file.
 
-- Do not drop a login route. The list is `LoginType` in `zswater_client/const.py`.
+- The login is 手机号 + 密码 + 短信验证码, matching the portal's own card field
+  for field. There is **no** 图形验证码: the portal's `captchaUrl`/`keyDate`
+  state is dead code (`this.state.captchaUrl;` is a bare statement and no image
+  is rendered). Do not reintroduce a captcha step, and do not re-add a login
+  menu — the two other routes in `LoginType` need credentials a user cannot
+  obtain (see that enum's docstring).
 - Do not rename sensor suffixes, entity unique ids, or device identifiers.
   Suffixes live in the top-level `const.py`; the table lives in `sensor.py`.
 - Adding a sensor = one row in `_SENSOR_DEFINITIONS` + `strings.json` +
   `translations/zh-Hans.json` + `translations/en.json`.
 - Keep `zswater_client/` free of Home Assistant imports — `tests/test_config_flow_helpers.py`
   asserts this, and `zswater_client_demo.py` depends on it.
-- Do not widen the captcha endpoint's exposure: it must stay single-use, TTL-bound
-  (`CAPTCHA_TTL`) and keyed by an unguessable token.
 - Plaintext passwords must never be written to `ConfigEntry.data`. Only the token
-  is persisted; `async_setup_entry` strips a legacy `CONF_PASSWORD`.
+  is persisted; `async_setup_entry` strips a legacy `CONF_PASSWORD`. The login
+  password lives in flow instance state (`_pending_password`) for the two steps
+  the portal needs it across, and nowhere else.
 - Do not change `tests/` to accommodate a refactor.
 
 When you change one place, change the coupled places too:
@@ -70,7 +74,8 @@ When you change one place, change the coupled places too:
 | You change | Also touch |
 |------------|------------|
 | New sensor | `const.py` suffix + `_SENSOR_DEFINITIONS` + the translation trio |
-| New login route | `LoginType` + `LOGIN_MENU_TO_STEP` in `config_flow.py` + the translation trio |
+| New login route | `LoginType` + the step in `config_flow.py` + the translation trio |
+| A step's `description`/`title`/`menu_options` | the matching `async_show_form`/`async_show_menu` call — `tests/test_flow_translations.py` cross-checks both directions |
 | Portal payload field | `zswater_client/models.py` fallback chain + `tests/test_models.py` |
 | Endpoint path | `zswater_client/const.py` |
 
@@ -93,7 +98,11 @@ truth for matrix and versions.
   options flows itself and the base signature has changed between releases.
 - `strings.json` is the Chinese source; `zh-Hans.json` duplicates it. Keep both in
   sync when editing UI copy.
-- The captcha view sets `requires_auth = False` on purpose (a plain link click
-  carries no bearer token). Do not "fix" it to `True`; see the module docstring.
-- `_extract_unionid` accepts both a bare `unionid` and a pasted whole URL. Keep
-  that tolerance — the README tells users to paste either.
+- Home Assistant dispatches a menu choice itself: `data_entry_flow` consumes
+  `next_step_id` and calls `async_step_<id>`, never the menu's own method. A
+  menu option whose id is not a step id fails as an error dialog with no text,
+  and an option with no `menu_options` label renders blank.
+  `tests/test_flow_translations.py` checks both.
+- A step description differing from what the flow renders is invisible to every
+  Python-level test — the frontend formats it. That is what the same module is
+  for; run it before touching `strings.json`.

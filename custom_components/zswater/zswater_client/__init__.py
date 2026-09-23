@@ -38,7 +38,6 @@ from .const import (
     CONTENT_TYPE,
     DEFAULT_TIMEOUT,
     PATH_BILL_PAY_INFO,
-    PATH_CAPTCHA,
     PATH_CHECK_PHONE_CODE,
     PATH_HANG_RECORD,
     PATH_LOGIN,
@@ -52,8 +51,8 @@ from .const import (
     PATH_WECHAT_LOGIN,
     REQUEST_PARA_FIELD,
     REGISTER_COMMAND_WECHAT,
-    SMS_TYPE_BIND_METER,
     SMS_TYPE_REGISTER,
+    SMS_TYPE_VERIFY,
     STATUS_NOT_LOGGED_IN,
     STATUS_OK,
     LoginType,
@@ -210,33 +209,14 @@ class ZSWaterClient:
 
     # --------------------------------------------------------------- auth
 
-    async def async_get_captcha(self, timestamp: int | str) -> bytes:
-        """Download the login 图形验证码 image for ``timestamp``.
-
-        The portal binds the image to the timestamp it was generated with, so
-        the same value must be sent back as ``timestamp`` on login.
-        """
-        url = f"{BASE_URL}{PATH_CAPTCHA}"
-        try:
-            async with self._session.get(
-                url, params={"timestamp": timestamp}, timeout=self._timeout
-            ) as response:
-                if response.status != 200:
-                    raise ZSWaterApiError(f"HTTP {response.status} from {PATH_CAPTCHA}")
-                return await response.read()
-        except ZSWaterApiError:
-            raise
-        except (aiohttp.ClientError, TimeoutError) as err:
-            raise ZSWaterTransportError(f"captcha download failed: {err}") from err
-
     async def async_send_sms_code(
-        self, mobile: str, code_type: int = SMS_TYPE_REGISTER
+        self, mobile: str, code_type: int = SMS_TYPE_VERIFY
     ) -> str:
         """Ask the portal to text a 短信验证码 to ``mobile``.
 
-        ``code_type`` is ``1`` for registration, ``2`` for binding a 户号 and
-        ``7`` for the general identity-check flows. Returns the operator's own
-        message, which is normally 验证码发送成功.
+        ``code_type`` is ``1`` for registration, ``2`` for logging in and for
+        verifying a phone number, and ``7`` for the general identity-check
+        flows. Returns the operator's own message, normally 验证码发送成功.
         """
         data = await self._async_request(
             "GET", PATH_SEND_AUTH_CODE, {"mobile": mobile, "type": code_type}
@@ -245,28 +225,31 @@ class ZSWaterClient:
             return str(data.get("message") or "验证码已发送")
         return "验证码已发送"
 
-    async def async_login_with_password(
+    async def async_login(
         self,
         mobile: str,
         password: str,
-        captcha_code: str | int,
-        timestamp: int | str,
+        sms_code: str | int,
+        timestamp: int | str | None = None,
     ) -> Mapping[str, Any]:
-        """Log in with 手机号 + 密码 + 图形验证码.
+        """Log in with 手机号 + 短信验证码 + 密码.
+
+        This mirrors the portal's own login form, which pairs a 手机号 field, a
+        「获取手机验证码」 button and a 手机验证码 field named ``code``; the
+        password is sent as lowercase hex MD5. ``timestamp`` is the value the
+        form keeps alongside its (unrendered) captcha state and is optional.
 
         Returns the portal's ``data`` block, which carries ``userInfo.token``.
         """
-        data = await self._async_request(
-            "POST",
-            PATH_LOGIN,
-            {
-                "meterPhone": mobile,
-                "userName": mobile,
-                "password": md5_hex(password),
-                "code": captcha_code,
-                "timestamp": timestamp,
-            },
-        )
+        params: dict[str, Any] = {
+            "meterPhone": mobile,
+            "userName": mobile,
+            "password": md5_hex(password),
+            "code": sms_code,
+        }
+        if timestamp is not None:
+            params["timestamp"] = timestamp
+        data = await self._async_request("POST", PATH_LOGIN, params)
         self._adopt_token(data)
         return data if isinstance(data, Mapping) else {}
 

@@ -5,13 +5,10 @@
     "@zswater"
   ],
   "config_flow": true,
-  "dependencies": [
-    "http"
-  ],
   "documentation": "https://github.com/zswater/zswater-ha",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/zswater/zswater-ha/issues",
   "requirements": [],
-  "version": "0.1.1"
+  "version": "0.1.2"
 }

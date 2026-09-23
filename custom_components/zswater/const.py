@@ -22,9 +22,6 @@ CONF_SETTINGS = "settings"
 CONF_UPDATED_AT = "updated_at"
 CONF_ACTION = "action"
 CONF_SMS_CODE = "sms_code"
-CONF_CAPTCHA_CODE = "captcha_code"
-CONF_CAPTCHA_TIMESTAMP = "captcha_timestamp"
-CONF_UNIONID = "unionid"
 CONF_HISTORY_DAYS = "history_days"
 CONF_METER_NUMBER = "meter_number"
 CONF_METER_NAME = "meter_name"
@@ -35,11 +32,10 @@ CONF_METER_ADDRESS = "meter_address"
 
 STEP_NETWORK = "network"
 STEP_USER = "user"
-STEP_PASSWORD_LOGIN = "password_login"
-STEP_WECHAT_LOGIN = "wechat_login"
-STEP_SMS_REGISTER = "sms_register"
-STEP_SMS_REGISTER_CODE = "sms_register_code"
-STEP_LOGIN_TYPE = "login_type"
+#: 手机号 + 密码; submitting this step texts the 短信验证码.
+STEP_CREDENTIALS = "credentials"
+#: 短信验证码; submitting this step logs in.
+STEP_SMS_CODE = "sms_code"
 STEP_INIT = "init"
 STEP_SETTINGS = "settings"
 STEP_ADD_ACCOUNT = "add_account"
@@ -56,24 +52,7 @@ ERROR_CANNOT_CONNECT = "cannot_connect"
 ERROR_INVALID_AUTH = "invalid_auth"
 ERROR_UNKNOWN = "unknown"
 ERROR_NO_SMS_CODE = "no_sms_code"
-ERROR_CAPTCHA_INVALID = "captcha_invalid"
 ERROR_SMS_CODE_INVALID = "sms_code_invalid"
-
-# ------------------------------------------------------------------- values
-
-#: The login menu, in the order shown to the user.
-#:
-#: These entries are step ids, not :class:`LoginType` values, because Home
-#: Assistant dispatches a menu choice itself: ``data_entry_flow`` calls
-#: ``async_step_<next_step_id>`` and never passes the choice to the menu's own
-#: method. An option id with no matching step raises ``UnknownStep``, which the
-#: frontend reports as an error dialog with no text. The same ids are the
-#: translation keys under ``config.step.login_type.menu_options``.
-LOGIN_MENU_OPTIONS: tuple[str, ...] = (
-    STEP_PASSWORD_LOGIN,
-    STEP_WECHAT_LOGIN,
-    STEP_SMS_REGISTER,
-)
 
 # --------------------------------------------------------------- sensor keys
 
@@ -110,8 +89,6 @@ DEFAULT_UPDATE_INTERVAL = int(timedelta(hours=6).total_seconds())
 MIN_UPDATE_INTERVAL = 60
 #: How much billing history to pull per 户号.
 DEFAULT_HISTORY_DAYS = 120
-#: How long a generated captcha image stays fetchable, in seconds.
-CAPTCHA_TTL = 300
 #: Per-request timeout handed to the client.
 SETTING_UPDATE_TIMEOUT = 30
 
@@ -120,9 +97,6 @@ IP_FAMILY_IPV4 = "ipv4"
 IP_FAMILY_IPV6 = "ipv6"
 IP_FAMILY_OPTIONS = (IP_FAMILY_AUTO, IP_FAMILY_IPV4, IP_FAMILY_IPV6)
 DEFAULT_IP_FAMILY = IP_FAMILY_AUTO
-
-#: URL the user opens to read a fresh 图形验证码 inside a config flow.
-CAPTCHA_URL_TEMPLATE = "/api/zswater/captcha/{token}"
 
 #: Portal entry point, quoted in the config-flow help text.
 PORTAL_URL = "https://smartbi.zsws.com.cn/"
