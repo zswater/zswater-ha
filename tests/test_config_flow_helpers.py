@@ -3,26 +3,27 @@
 Importing every module of the custom component is itself the check here: it
 catches wrong Home Assistant imports, renamed constants and broken entity
 declarations without needing a running Home Assistant instance.
+
+Everything is imported as ``custom_components.zswater.*`` — the same module
+objects Home Assistant's loader uses. Importing the package a second way (by
+putting ``custom_components/`` on ``sys.path``) produces a duplicate module
+identity that quietly breaks the config-flow tests.
 """
 
 from __future__ import annotations
 
 import importlib
-import sys
 from pathlib import Path
 
 import pytest
 
-COMPONENT_DIR = Path(__file__).resolve().parents[1] / "custom_components"
-PACKAGE = "zswater"
-
 # Home Assistant is only present in the test environment.
 pytest.importorskip("homeassistant")
 
-sys.path.insert(0, str(COMPONENT_DIR))
+from custom_components.zswater import config_flow, const  # noqa: E402
 
-config_flow = importlib.import_module(f"{PACKAGE}.config_flow")
-const = importlib.import_module(f"{PACKAGE}.const")
+PACKAGE = "custom_components.zswater"
+PACKAGE_DIR = Path(config_flow.__file__).resolve().parent
 
 
 def test_every_module_imports() -> None:
@@ -84,7 +85,7 @@ def test_an_unbound_portal_account_is_guided_not_aborted() -> None:
     there told the user nothing actionable; the flow now explains how to bind
     one and re-checks on submit.
     """
-    source = (COMPONENT_DIR / PACKAGE / "config_flow.py").read_text(encoding="utf-8")
+    source = (PACKAGE_DIR / "config_flow.py").read_text(encoding="utf-8")
     assert "return await self.async_step_no_account()" in source
     assert hasattr(config_flow.ZSWaterConfigFlow, "async_step_no_account")
 
@@ -110,7 +111,7 @@ def test_removed_login_machinery_stays_removed(removed: str) -> None:
     invented a 图形验证码 step and two unusable routes instead.
     """
     for filename in ("const.py", "config_flow.py"):
-        source = (COMPONENT_DIR / PACKAGE / filename).read_text(encoding="utf-8")
+        source = (PACKAGE_DIR / filename).read_text(encoding="utf-8")
         assert removed not in source, f"{removed} came back in {filename}"
 
 

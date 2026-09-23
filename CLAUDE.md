@@ -79,6 +79,18 @@ Write rules. Read the source files. Do not copy lists or numbers into this file.
   `translations/zh-Hans.json` + `translations/en.json`.
 - Keep `zswater_client/` free of Home Assistant imports — `tests/test_config_flow_helpers.py`
   asserts this, and `zswater_client_demo.py` depends on it.
+- `manifest.json` must stay pure ASCII. Home Assistant reads it with
+  `manifest_path.read_text()` — no encoding — so a non-ASCII `name` blows up
+  under any non-UTF-8 locale. The Chinese name lives in `strings.json` as a
+  top-level `title` instead.
+- Anything a step *does* at runtime needs a test that runs it. `tests/test_config_flow.py`
+  drives the wizard through `hass.config_entries.flow`, and
+  `tests/test_undefined_names.py` catches constants that are used but never
+  imported. Both exist because `CONF_AUTH_TOKEN` was dropped from an import list
+  while removing unrelated constants: the 户号 step rendered, then raised
+  `NameError` on submit, and Home Assistant showed a bare "Unknown error
+  occurred" with nothing pointing at the cause. Source-text checks alone do not
+  catch that.
 - Plaintext passwords must never be written to `ConfigEntry.data`. Only the token
   is persisted; `async_setup_entry` strips a legacy `CONF_PASSWORD`. The login
   password lives in flow instance state (`_pending_password`) for the two steps
