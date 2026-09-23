@@ -1,0 +1,45 @@
+name: Release
+
+# Pushing a vX.Y.Z tag publishes the release, so a version is never half-cut:
+# the tag, the release and manifest.json are checked against each other.
+on:
+  push:
+    tags:
+      - "v*"
+
+# The repository's default token is read-only, and creating a release writes.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag matches the integration version
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import sys
+
+          tag = os.environ["GITHUB_REF_NAME"].lstrip("v")
+          manifest = pathlib.Path("custom_components/zswater/manifest.json")
+          version = json.loads(manifest.read_text(encoding="utf-8"))["version"]
+          if tag != version:
+              sys.exit(f"tag {tag} does not match manifest version {version}")
+          print(f"tag {tag} matches manifest version {version}")
+          PY
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "中山公用水务 HA 集成 ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --verify-tag
