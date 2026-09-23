@@ -10,7 +10,12 @@
       },
       "login_type": {
         "title": "登录方式",
-        "description": "请选择登录方式：\n\n- **手机号密码登录**：使用网上营业厅的手机号、密码和图形验证码，最稳定。\n- **微信扫码登录**：在微信「中山公用水务」公众号进入网上营业厅后，粘贴地址栏中的 unionid。\n- **短信验证码注册**：还没有网上营业厅账号时，用手机号 + 短信验证码注册一个新账号。"
+        "description": "网上营业厅支持以下三种方式，任选其一。",
+        "menu_options": {
+          "password_login": "手机号密码登录（最稳定）",
+          "wechat_login": "微信扫码登录（用公众号里的 unionid）",
+          "sms_register": "短信验证码注册（还没有网上营业厅账号）"
+        }
       },
       "password_login": {
         "title": "手机号密码登录",
@@ -82,7 +87,12 @@
     "step": {
       "init": {
         "title": "中山公用水务",
-        "description": "请选择要执行的操作。"
+        "description": "请选择要执行的操作。",
+        "menu_options": {
+          "add_account": "添加已绑定的户号",
+          "bind_account": "绑定新户号",
+          "settings": "参数设置"
+        }
       },
       "add_account": {
         "title": "添加已绑定的户号",
@@ -113,6 +123,14 @@
           "ip_family": "网络协议"
         }
       }
+    },
+    "error": {
+      "cannot_connect": "无法连接中山公用水务服务器，请检查网络或改用其它网络协议后重试。",
+      "invalid_auth": "登录失败：账号、密码或验证码不正确，或账号未开通网上营业厅。",
+      "unknown": "发生未知错误，请查看日志获取详细信息。",
+      "no_sms_code": "短信验证码发送失败，请确认手机号已在营业厅登记。",
+      "captcha_invalid": "图形验证码不正确或已过期，请重新填写。",
+      "sms_code_invalid": "短信验证码不正确或已过期。"
     },
     "abort": {
       "all_added": "所有已绑定的户号都已接入。",

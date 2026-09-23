@@ -10,7 +10,12 @@
       },
       "login_type": {
         "title": "Login method",
-        "description": "Choose how to sign in:\n\n- **Password**: the phone number and password of your portal account, plus a graphic captcha. Most reliable.\n- **WeChat**: open the portal from the 中山公用水务 WeChat official account and paste the `unionid` from the address bar.\n- **SMS registration**: if you have no portal account yet, create one with a phone number and an SMS code."
+        "description": "The portal accepts any one of these three methods.",
+        "menu_options": {
+          "password_login": "Phone number and password (most reliable)",
+          "wechat_login": "WeChat (paste the unionid from the official account)",
+          "sms_register": "SMS code registration (no portal account yet)"
+        }
       },
       "password_login": {
         "title": "Password login",
@@ -82,7 +87,12 @@
     "step": {
       "init": {
         "title": "Zhongshan Water",
-        "description": "Choose what to do."
+        "description": "Choose what to do.",
+        "menu_options": {
+          "add_account": "Add an already bound 户号",
+          "bind_account": "Bind a new 户号",
+          "settings": "Settings"
+        }
       },
       "add_account": {
         "title": "Add bound accounts",
@@ -113,6 +123,14 @@
           "ip_family": "Network protocol"
         }
       }
+    },
+    "error": {
+      "cannot_connect": "Cannot reach the Zhongshan Water server. Check the network or pick another network protocol.",
+      "invalid_auth": "Sign-in failed: the phone number, password or captcha is wrong, or the account has no portal access.",
+      "unknown": "Something went wrong. Check the log for details.",
+      "no_sms_code": "The SMS code could not be sent. Make sure the phone number is registered with the portal.",
+      "captcha_invalid": "The graphic captcha is wrong or expired. Please enter it again.",
+      "sms_code_invalid": "The SMS code is wrong or expired."
     },
     "abort": {
       "all_added": "Every bound water account is already added.",

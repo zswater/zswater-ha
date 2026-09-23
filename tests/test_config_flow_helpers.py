@@ -86,24 +86,22 @@ def test_extract_unionid_accepts_bare_values_and_urls(raw: str, expected: str) -
     assert config_flow._extract_unionid(raw) == expected
 
 
-def test_login_menu_options_all_map_to_a_step() -> None:
-    for option in const.LOGIN_TYPE_OPTIONS:
-        assert str(option) in config_flow.LOGIN_MENU_TO_STEP
-
-    assert config_flow.LOGIN_MENU_TO_STEP[const.LoginType.PASSWORD] == (
-        const.STEP_PASSWORD_LOGIN
-    )
-    assert config_flow.LOGIN_MENU_TO_STEP[const.LoginType.WECHAT] == (
-        const.STEP_WECHAT_LOGIN
-    )
-    assert config_flow.LOGIN_MENU_TO_STEP[const.LoginType.SMS] == (
-        const.STEP_SMS_REGISTER
-    )
+def test_login_menu_offers_one_option_per_login_type() -> None:
+    """Every supported login route has to be reachable from the menu."""
+    assert set(const.LOGIN_MENU_OPTIONS) == {
+        const.STEP_PASSWORD_LOGIN,
+        const.STEP_WECHAT_LOGIN,
+        const.STEP_SMS_REGISTER,
+    }
+    assert len(const.LOGIN_MENU_OPTIONS) == 3
 
 
-def test_login_menu_steps_exist_on_the_flow() -> None:
-    for step in config_flow.LOGIN_MENU_TO_STEP.values():
-        assert hasattr(config_flow.ZSWaterConfigFlow, f"async_step_{step}")
+#: Menu option ids double as step ids and as translation keys; the generic
+#: checks for that live in ``test_flow_translations.py``.
+def test_login_menu_options_are_step_ids() -> None:
+    for option in const.LOGIN_MENU_OPTIONS:
+        assert option.startswith(("password_", "wechat_", "sms_"))
+        assert hasattr(config_flow.ZSWaterConfigFlow, f"async_step_{option}")
 
 
 def test_account_label_includes_every_known_field() -> None:

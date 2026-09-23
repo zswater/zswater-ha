@@ -56,15 +56,23 @@ ERROR_CANNOT_CONNECT = "cannot_connect"
 ERROR_INVALID_AUTH = "invalid_auth"
 ERROR_UNKNOWN = "unknown"
 ERROR_NO_SMS_CODE = "no_sms_code"
-ERROR_NOT_BOUND = "not_bound"
+ERROR_CAPTCHA_INVALID = "captcha_invalid"
+ERROR_SMS_CODE_INVALID = "sms_code_invalid"
 
 # ------------------------------------------------------------------- values
 
-#: The portal's login buttons, in the order shown to the user.
-LOGIN_TYPE_OPTIONS: tuple[str, ...] = (
-    LoginType.PASSWORD,
-    LoginType.WECHAT,
-    LoginType.SMS,
+#: The login menu, in the order shown to the user.
+#:
+#: These entries are step ids, not :class:`LoginType` values, because Home
+#: Assistant dispatches a menu choice itself: ``data_entry_flow`` calls
+#: ``async_step_<next_step_id>`` and never passes the choice to the menu's own
+#: method. An option id with no matching step raises ``UnknownStep``, which the
+#: frontend reports as an error dialog with no text. The same ids are the
+#: translation keys under ``config.step.login_type.menu_options``.
+LOGIN_MENU_OPTIONS: tuple[str, ...] = (
+    STEP_PASSWORD_LOGIN,
+    STEP_WECHAT_LOGIN,
+    STEP_SMS_REGISTER,
 )
 
 # --------------------------------------------------------------- sensor keys

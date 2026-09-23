@@ -65,11 +65,13 @@ from .const import (
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
     ERROR_CANNOT_CONNECT,
+    ERROR_CAPTCHA_INVALID,
     ERROR_INVALID_AUTH,
     ERROR_NO_SMS_CODE,
+    ERROR_SMS_CODE_INVALID,
     ERROR_UNKNOWN,
     IP_FAMILY_OPTIONS,
-    LOGIN_TYPE_OPTIONS,
+    LOGIN_MENU_OPTIONS,
     MIN_UPDATE_INTERVAL,
     PORTAL_URL,
     SETTING_UPDATE_TIMEOUT,
@@ -98,14 +100,6 @@ from .zswater_client import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-#: Menu value → config-flow step id. The menu exposes :class:`LoginType`
-#: values, which do not all share a name with their step.
-LOGIN_MENU_TO_STEP: dict[str, str] = {
-    "password": STEP_PASSWORD_LOGIN,
-    "wechat": STEP_WECHAT_LOGIN,
-    "sms": STEP_SMS_REGISTER,
-}
 
 _IP_FAMILY_TO_SOCKET: dict[str, int] = {
     "ipv4": socket.AF_INET,
@@ -223,19 +217,21 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
                     ): vol.In(IP_FAMILY_OPTIONS)
                 }
             ),
+            description_placeholders={"portal_url": PORTAL_URL},
         )
 
     async def async_step_login_type(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Step 2 — pick how to authenticate."""
-        if user_input is not None:
-            step = LOGIN_MENU_TO_STEP.get(user_input[CONF_LOGIN_TYPE])
-            if step is not None:
-                return await getattr(self, f"async_step_{step}")()
+        """Step 2 — pick how to authenticate.
+
+        The step body ignores ``user_input``: Home Assistant consumes a menu
+        choice in ``data_entry_flow`` and calls ``async_step_<next_step_id>``
+        directly, so dispatching here as well would be unreachable code.
+        """
         return self.async_show_menu(
             step_id=STEP_LOGIN_TYPE,
-            menu_options=[str(option) for option in LOGIN_TYPE_OPTIONS],
+            menu_options=list(LOGIN_MENU_OPTIONS),
         )
 
     async def async_step_password_login(
@@ -254,7 +250,7 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             except (ZSWaterAuthError, ZSWaterApiError) as err:
                 errors["base"] = ERROR_INVALID_AUTH
-                errors[CONF_CAPTCHA_CODE] = "captcha_invalid"
+                errors[CONF_CAPTCHA_CODE] = ERROR_CAPTCHA_INVALID
                 _LOGGER.debug("密码登录被拒: %s", err)
             except ZSWaterTransportError:
                 errors["base"] = ERROR_CANNOT_CONNECT
@@ -268,6 +264,9 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
                 return await self._async_finish_login()
 
         await self._async_prepare_captcha()
+        if not self._captcha_url and not errors:
+            # Say why the captcha link is absent, instead of rendering a dead one.
+            errors["base"] = ERROR_CANNOT_CONNECT
         return self.async_show_form(
             step_id=STEP_PASSWORD_LOGIN,
             data_schema=vol.Schema(
@@ -278,10 +277,7 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
-            description_placeholders={
-                "captcha_url": self._captcha_url,
-                "portal_url": PORTAL_URL,
-            },
+            description_placeholders={"captcha_url": self._captcha_url},
         )
 
     async def async_step_wechat_login(
@@ -360,7 +356,6 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
-            description_placeholders={"portal_url": PORTAL_URL},
         )
 
     async def async_step_sms_register_code(
@@ -379,7 +374,7 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             except (ZSWaterAuthError, ZSWaterApiError) as err:
                 errors["base"] = ERROR_INVALID_AUTH
-                errors[CONF_SMS_CODE] = "sms_code_invalid"
+                errors[CONF_SMS_CODE] = ERROR_SMS_CODE_INVALID
                 _LOGGER.debug("注册被门户拒绝: %s", err)
             except ZSWaterTransportError:
                 errors["base"] = ERROR_CANNOT_CONNECT
@@ -654,7 +649,7 @@ class ZSWaterOptionsFlow(OptionsFlow):
                 if not await client.async_check_phone_code(
                     code, pending.get(CONF_METER_PHONE, "")
                 ):
-                    errors[CONF_SMS_CODE] = "sms_code_invalid"
+                    errors[CONF_SMS_CODE] = ERROR_SMS_CODE_INVALID
                 else:
                     bound = await self._async_find_account(
                         pending.get(CONF_METER_NUMBER, "")
