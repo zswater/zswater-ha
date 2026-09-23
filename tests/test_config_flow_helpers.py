@@ -76,6 +76,19 @@ def test_login_walks_the_portals_own_form() -> None:
         assert hasattr(config_flow.ZSWaterConfigFlow, f"async_step_{step}"), step
 
 
+def test_an_unbound_portal_account_is_guided_not_aborted() -> None:
+    """An empty 户号 list must lead somewhere, not just stop.
+
+    The portal's list endpoint returns only 户号 bound *inside the portal*, so a
+    correctly configured account can legitimately come back empty. Aborting
+    there told the user nothing actionable; the flow now explains how to bind
+    one and re-checks on submit.
+    """
+    source = (COMPONENT_DIR / PACKAGE / "config_flow.py").read_text(encoding="utf-8")
+    assert "return await self.async_step_no_account()" in source
+    assert hasattr(config_flow.ZSWaterConfigFlow, "async_step_no_account")
+
+
 @pytest.mark.parametrize(
     "removed",
     [

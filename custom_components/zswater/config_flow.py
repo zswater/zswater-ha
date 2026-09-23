@@ -77,6 +77,7 @@ from .const import (
     STEP_ADD_ACCOUNT_VERIFY,
     STEP_CREDENTIALS,
     STEP_INIT,
+    STEP_NO_ACCOUNT,
     STEP_SETTINGS,
     STEP_SMS_CODE,
     STEP_USER,
@@ -253,10 +254,31 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"mobile": self._mobile},
         )
 
+    async def async_step_no_account(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Step 4 — the portal has no 户号 bound to this account yet.
+
+        ``queryUserMeterList`` only ever returns 户号 bound *inside the portal*;
+        its own client says 「您还没有绑定户号，请去绑定户号」 for the same case.
+        A 户号 shown by the mobile app or a 小程序 belongs to a different
+        front-end and does not appear here until it is bound on the web too.
+
+        Submitting this form simply re-runs the lookup, so the user can bind it
+        in a browser and continue without starting over.
+        """
+        if user_input is not None:
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id=STEP_NO_ACCOUNT,
+            data_schema=vol.Schema({}),
+            description_placeholders={"portal_url": PORTAL_URL},
+        )
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Step 3 — choose which 户号 to monitor."""
+        """Step 5 — choose which 户号 to monitor."""
         assert self._client is not None
         try:
             accounts = await self._client.async_get_accounts()
@@ -266,7 +288,9 @@ class ZSWaterConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason=ERROR_CANNOT_CONNECT)
 
         if not accounts:
-            return self.async_abort(reason=ABORT_NO_ACCOUNT)
+            # Not an error: the portal simply has nothing bound yet. Explain how
+            # to fix that and let the user re-check without restarting the flow.
+            return await self.async_step_no_account()
 
         by_number = {account.meter_number: account for account in accounts}
 

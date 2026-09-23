@@ -264,6 +264,26 @@ async def test_reading_history_window_is_yyyymmdd() -> None:
 
 
 @pytest.mark.asyncio
+async def test_account_list_matches_the_portals_own_call() -> None:
+    """The portal requests the 户号 list with exactly ``{"UNID": ""}``.
+
+    Pinned deliberately: an empty result is easy to misread as a malformed
+    request. The request is correct — an empty list means the portal account
+    has no 户号 bound to it.
+    """
+    session = FakeSession({"status": 0, "data": []})
+    client = ZSWaterClient(session, token="T")
+
+    assert await client.async_get_accounts() == []
+
+    assert session.calls[0]["url"] == f"{BASE_URL}{PATH_METER_LIST}"
+    payload = json.loads(session.calls[0]["data"].removeprefix("requestPara="))
+    assert payload["UNID"] == ""
+    assert payload["waterCorpId"] == 3
+    assert payload["accountType"] == "XJ"
+
+
+@pytest.mark.asyncio
 async def test_login_code_request_uses_the_verify_type() -> None:
     """The portal's login form asks for its code with ``type: 2``."""
     session = FakeSession({"status": 0, "data": {"message": "验证码发送成功"}})

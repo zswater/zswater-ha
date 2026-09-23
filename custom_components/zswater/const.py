@@ -37,6 +37,8 @@ STEP_CREDENTIALS = "credentials"
 #: 短信验证码; submitting this step logs in.
 STEP_SMS_CODE = "sms_code"
 STEP_INIT = "init"
+#: Reached when the portal account has no 户号 bound to it yet.
+STEP_NO_ACCOUNT = "no_account"
 STEP_SETTINGS = "settings"
 STEP_ADD_ACCOUNT = "add_account"
 STEP_ADD_ACCOUNT_VERIFY = "add_account_verify"

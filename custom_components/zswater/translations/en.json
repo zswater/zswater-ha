@@ -23,6 +23,10 @@
           "sms_code": "SMS code"
         }
       },
+      "no_account": {
+        "title": "No 户号 bound yet",
+        "description": "Signed in, but this account has no water meter bound **in the web portal**. Registration and login worked — the portal's billing API only returns 户号 bound *in its own system*, and an empty list means nothing is bound there yet. Bind one first:\n\n1. Open the [web portal]({portal_url}) and sign in (phone number + password + SMS code)\n2. Find 我的用水户 → 绑定其他户号 and enter the **户号** and **户名**, then follow the prompts\n3. Come back here and press Submit to re-check — no need to sign in again\n\n> ⚠️ A 户号 shown by the 中山公用水务 mobile app or 小程序 belongs to a **different front-end** and will not appear here until it is bound on the web as well."
+      },
       "init": {
         "title": "Choose 户号",
         "description": "Signed in. {count} water account(s) were found. Select the ones to add to Home Assistant (multiple allowed).",

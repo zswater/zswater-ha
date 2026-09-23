@@ -46,6 +46,21 @@ re-released, re-read that bundle before editing `zswater_client/`.
 - Passwords are lowercase hex MD5 (blueimp-md5 default export), see `md5_hex`.
 - `getMeterInfoByUId` is counter-intuitive: `nextto`/`nextreaddate` are **本期**,
   `lastto`/`lastreaddate` are **上期**.
+- `queryUserMeterList` returns **only 户号 bound inside the portal**, and the
+  portal asks for it with exactly `{"UNID": ""}` — byte-for-byte what
+  `async_get_accounts` sends. An empty list therefore means "nothing bound", not
+  "bad request"; the portal's own client warns 「您还没有绑定户号，请去绑定户号」.
+  A 户号 visible in the mobile app / 小程序 is a different front-end with its own
+  binding and does not show up here. Do not "fix" the empty case by changing the
+  request, and keep `STEP_NO_ACCOUNT` in the flow so the user is told what to do.
+- Binding a 户号, if that ever needs implementing, is two verified calls:
+  `getMeterInfoByUId` with `{userID: 户号, meterName: 户名, code, meterIdCard,
+  meterPhone}` → take `data[0]`, then `addMeter/v2` with `{meterName: name,
+  meterNumber: userID, meterMobile: phone, meterAlert: 0, meterNick: "",
+  code, meterAddress: address}`. `code` on that form is the 图形验证码 value —
+  the one place the portal does render a captcha image
+  (`/iwater/nt/validateCode.json?timestamp=`) — and one other code path hardcodes
+  it to `"777777"`.
 
 ## Do not break
 
