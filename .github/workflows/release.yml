@@ -39,7 +39,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # --latest is explicit on purpose. Relying on the default left
+          # /releases/latest pointing at an older tag, and HACS resolves a
+          # repository's version from its releases.
           gh release create "${GITHUB_REF_NAME}" \
             --title "中山公用水务 HA 集成 ${GITHUB_REF_NAME}" \
             --generate-notes \
+            --latest \
             --verify-tag
