@@ -1,7 +1,7 @@
-# Pins the Home Assistant version the suite runs against. The config-flow tests
-# drive a real hass instance, so the version matters; pinned rather than floating
-# so CI and local runs agree. Bump deliberately, then re-run.
+# Pins the Home Assistant version the suite runs against, and with it pytest,
+# pytest-asyncio and aiohttp — the harness constrains all of them. The
+# config-flow tests drive a real hass instance, so the version matters; pinning
+# rather than floating keeps CI and local runs in agreement.
+#
+# Bump deliberately, then re-run locally before pushing.
 pytest-homeassistant-custom-component==0.13.205
-pytest
-pytest-asyncio
-aiohttp

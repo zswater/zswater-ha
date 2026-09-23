@@ -30,4 +30,17 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements_test.txt
       - name: Run tests
-        run: python -m pytest -q
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short 2>&1 | tee pytest-output.txt
+
+      - name: Report failures as annotations
+        # Job logs require authentication to download; check annotations do not.
+        # Without this a failing run only says "exit code 1" from the outside,
+        # which is not enough to act on.
+        if: failure()
+        run: |
+          grep -E "^(FAILED|ERROR)|^E " pytest-output.txt | head -25 | while IFS= read -r line; do
+            echo "::error title=pytest::$line"
+          done
+          exit 1
