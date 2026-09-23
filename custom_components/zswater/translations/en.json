@@ -1,0 +1,172 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Network",
+        "description": "The Zhongshan Water portal ([smartbi.zsws.com.cn]({portal_url})) resolves to an unreachable IPv6 address on some networks, which shows up as a connect timeout. If login keeps failing, come back here and pick \"IPv4 only\".",
+        "data": {
+          "ip_family": "Network protocol"
+        }
+      },
+      "login_type": {
+        "title": "Login method",
+        "description": "Choose how to sign in:\n\n- **Password**: the phone number and password of your portal account, plus a graphic captcha. Most reliable.\n- **WeChat**: open the portal from the 中山公用水务 WeChat official account and paste the `unionid` from the address bar.\n- **SMS registration**: if you have no portal account yet, create one with a phone number and an SMS code."
+      },
+      "password_login": {
+        "title": "Password login",
+        "description": "Sign in with your Zhongshan Water portal account.\n\n**Graphic captcha**: first [open the captcha image]({captcha_url}), then type the digits below. It is valid for 5 minutes and can only be viewed once; if you mistype it, just submit again to get a fresh one.",
+        "data": {
+          "account_number": "Phone number",
+          "password": "Password",
+          "captcha_code": "Graphic captcha"
+        }
+      },
+      "wechat_login": {
+        "title": "WeChat login",
+        "description": "1. Follow the 中山公用水务 official account in WeChat and open the portal via 在线服务 → 查询缴费 (or the [web portal]({portal_url})).\n2. Copy the part of the address bar that starts with `unionid=`.\n3. Paste it below — pasting the whole URL that contains `unionid=` works too.",
+        "data": {
+          "unionid": "unionid or full URL containing one"
+        }
+      },
+      "sms_register": {
+        "title": "SMS registration",
+        "description": "The portal does **not** support signing in with an SMS code alone; the code is only used to register an account.\n\nAn SMS code will be sent now. On the next screen, enter the code and your new password to finish registering and sign in automatically. Afterwards you can also use the password login.",
+        "data": {
+          "account_number": "Phone number",
+          "password": "Choose a password"
+        }
+      },
+      "sms_register_code": {
+        "title": "Enter the SMS code",
+        "description": "A code was sent to {mobile}. Enter the 6-digit SMS code to finish registering.",
+        "data": {
+          "sms_code": "SMS code"
+        }
+      },
+      "init": {
+        "title": "Choose 户号",
+        "description": "Signed in. {count} water account(s) were found. Select the ones to add to Home Assistant (multiple allowed).",
+        "data": {
+          "accounts": "Water accounts"
+        }
+      },
+      "reauth": {
+        "title": "Sign in again",
+        "description": "The session expired. Please sign in again."
+      },
+      "reconfigure": {
+        "title": "Update credentials",
+        "description": "Authenticate again with new credentials."
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot reach the Zhongshan Water server. Check your network or try another network protocol.",
+      "invalid_auth": "Login failed: wrong phone number, password or captcha, or the account has no portal access.",
+      "unknown": "Unexpected error. Check the log for details.",
+      "no_sms_code": "Could not send the SMS code. Make sure the phone number is registered with the utility.",
+      "captcha_invalid": "The graphic captcha is wrong or expired. Please enter it again.",
+      "sms_code_invalid": "The SMS code is wrong or expired."
+    },
+    "abort": {
+      "already_configured": "This phone number is already configured.",
+      "no_account": "No water account is available on this login. Bind one in the portal first.",
+      "all_added": "Every bound water account is already added.",
+      "single_instance_allowed": "Only a single instance is allowed.",
+      "cannot_connect": "Cannot reach the Zhongshan Water server.",
+      "invalid_auth": "The session is not valid.",
+      "reauth_successful": "Signed in again successfully.",
+      "reconfigure_successful": "Credentials updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Zhongshan Water",
+        "description": "Choose what to do."
+      },
+      "add_account": {
+        "title": "Add bound accounts",
+        "description": "These {count} water account(s) are bound in the portal but not yet added to Home Assistant. Multiple selection allowed."
+      },
+      "bind_account": {
+        "title": "Bind a new account",
+        "description": "Bind a water account that is not registered yet. Enter the account number, the account holder name and the phone number registered against the meter; the portal will text an SMS code to that number.\n\nIf binding fails here, bind it in the [web portal]({portal_url}) or in the 中山公用水务 WeChat account first, then use \"Add bound accounts\".",
+        "data": {
+          "meter_number": "Account number",
+          "meter_name": "Account holder",
+          "meter_phone": "Registered phone number"
+        }
+      },
+      "add_account_verify": {
+        "title": "Confirm the SMS code",
+        "description": "A code was sent to {mobile}. Enter it to finish binding the account.",
+        "data": {
+          "sms_code": "SMS code"
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Meter readings change monthly, so frequent polling is rarely needed; the amount owed changes as soon as a payment lands.",
+        "data": {
+          "update_interval": "Refresh interval (seconds, ≥60)",
+          "history_days": "Billing history window (days)",
+          "ip_family": "Network protocol"
+        }
+      }
+    },
+    "abort": {
+      "all_added": "Every bound water account is already added.",
+      "cannot_connect": "Cannot reach the Zhongshan Water server."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "arrears": {
+        "name": "Amount owed"
+      },
+      "current_bill": {
+        "name": "Current bill"
+      },
+      "balance": {
+        "name": "Account balance"
+      },
+      "last_reading": {
+        "name": "Previous meter reading"
+      },
+      "current_reading": {
+        "name": "Current meter reading"
+      },
+      "usage": {
+        "name": "Current period usage"
+      },
+      "water_fee": {
+        "name": "Current period water fee"
+      },
+      "penalty": {
+        "name": "Late payment fee"
+      },
+      "payable": {
+        "name": "Current period amount due"
+      },
+      "last_read_date": {
+        "name": "Previous reading date"
+      },
+      "current_read_date": {
+        "name": "Current reading date"
+      },
+      "history": {
+        "name": "Reading history"
+      }
+    },
+    "binary_sensor": {
+      "has_arrears": {
+        "name": "Arrears"
+      }
+    }
+  },
+  "exceptions": {
+    "login_expired": {
+      "message": "The session expired. Sign in again from the integration page."
+    }
+  }
+}

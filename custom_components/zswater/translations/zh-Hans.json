@@ -1,0 +1,172 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "网络设置",
+        "description": "中山公用水务网上营业厅（[smartbi.zsws.com.cn]({portal_url})）在部分网络下会解析到不可达的 IPv6 地址，表现为连接超时。若下一步登录一直失败，请回到这里改用「仅 IPv4」。",
+        "data": {
+          "ip_family": "网络协议"
+        }
+      },
+      "login_type": {
+        "title": "登录方式",
+        "description": "请选择登录方式：\n\n- **手机号密码登录**：使用网上营业厅的手机号、密码和图形验证码，最稳定。\n- **微信扫码登录**：在微信「中山公用水务」公众号进入网上营业厅后，粘贴地址栏中的 unionid。\n- **短信验证码注册**：还没有网上营业厅账号时，用手机号 + 短信验证码注册一个新账号。"
+      },
+      "password_login": {
+        "title": "手机号密码登录",
+        "description": "使用中山公用水务网上营业厅的账号登录。\n\n**图形验证码**：先[点此查看验证码]({captcha_url})，再把它填到下面。验证码 5 分钟内有效，且只能查看一次；填错了重新提交即可刷新。",
+        "data": {
+          "account_number": "手机号",
+          "password": "密码",
+          "captcha_code": "图形验证码"
+        }
+      },
+      "wechat_login": {
+        "title": "微信扫码登录",
+        "description": "1. 在微信中关注「中山公用水务」公众号，点击菜单「在线服务」→「查询缴费」进入网上营业厅（[网页版入口]({portal_url})）。\n2. 复制地址栏中以 `unionid=` 开头的那一段参数值。\n3. 把它粘贴到下面（直接粘贴整条包含 `unionid=` 的网址也可以）。",
+        "data": {
+          "unionid": "unionid 或含 unionid 的完整网址"
+        }
+      },
+      "sms_register": {
+        "title": "短信验证码注册",
+        "description": "网上营业厅**不提供仅凭短信验证码登录**的功能，短信验证码只用于注册账号。\n\n这里会先给你发送一条短信验证码，下一步填写验证码和新密码即可完成注册并自动登录；之后也可以改用「手机号密码登录」。",
+        "data": {
+          "account_number": "手机号",
+          "password": "设置密码"
+        }
+      },
+      "sms_register_code": {
+        "title": "输入短信验证码",
+        "description": "验证码已发送至 {mobile}，请填写收到的 6 位短信验证码完成注册。",
+        "data": {
+          "sms_code": "短信验证码"
+        }
+      },
+      "init": {
+        "title": "选择户号",
+        "description": "登录成功。该账号下共发现 {count} 个户号，请选择要接入 Home Assistant 的户号（可多选）。",
+        "data": {
+          "accounts": "户号"
+        }
+      },
+      "reauth": {
+        "title": "重新登录",
+        "description": "登录状态已失效，请重新登录。"
+      },
+      "reconfigure": {
+        "title": "更新登录信息",
+        "description": "请使用新的登录信息重新认证。"
+      }
+    },
+    "error": {
+      "cannot_connect": "无法连接中山公用水务服务器，请检查网络或改用其它网络协议后重试。",
+      "invalid_auth": "登录失败：账号、密码或验证码不正确，或账号未开通网上营业厅。",
+      "unknown": "发生未知错误，请查看日志获取详细信息。",
+      "no_sms_code": "短信验证码发送失败，请确认手机号已在营业厅登记。",
+      "captcha_invalid": "图形验证码不正确或已过期，请重新填写。",
+      "sms_code_invalid": "短信验证码不正确或已过期。"
+    },
+    "abort": {
+      "already_configured": "该手机号已配置过，无需重复添加。",
+      "no_account": "该账号下没有可用的户号，请先在营业厅或微信公众号中绑定户号。",
+      "all_added": "所有已绑定的户号都已接入。",
+      "single_instance_allowed": "只允许配置一个实例。",
+      "cannot_connect": "无法连接中山公用水务服务器。",
+      "invalid_auth": "登录状态无效。",
+      "reauth_successful": "重新登录成功。",
+      "reconfigure_successful": "登录信息已更新。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "中山公用水务",
+        "description": "请选择要执行的操作。"
+      },
+      "add_account": {
+        "title": "添加已绑定的户号",
+        "description": "以下 {count} 个户号已在营业厅中绑定，但尚未接入 Home Assistant，可多选。"
+      },
+      "bind_account": {
+        "title": "绑定新户号",
+        "description": "在营业厅中绑定一个尚未登记的户号。需要填写户号、户名，以及该水表登记的手机号；营业厅会向该手机号发送短信验证码。\n\n如果这里绑定失败，请先在[网上营业厅]({portal_url})或「中山公用水务」微信公众号里完成绑定，再用「添加已绑定的户号」接入。",
+        "data": {
+          "meter_number": "户号",
+          "meter_name": "户名",
+          "meter_phone": "水表登记手机号"
+        }
+      },
+      "add_account_verify": {
+        "title": "确认短信验证码",
+        "description": "验证码已发送至 {mobile}，请填写收到的短信验证码以完成户号绑定。",
+        "data": {
+          "sms_code": "短信验证码"
+        }
+      },
+      "settings": {
+        "title": "参数设置",
+        "description": "抄表读数按月更新，一般无需频繁刷新；欠费金额在缴费后会立即变化。",
+        "data": {
+          "update_interval": "刷新间隔（秒，≥60）",
+          "history_days": "用水记录回溯天数",
+          "ip_family": "网络协议"
+        }
+      }
+    },
+    "abort": {
+      "all_added": "所有已绑定的户号都已接入。",
+      "cannot_connect": "无法连接中山公用水务服务器。"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "arrears": {
+        "name": "欠费金额"
+      },
+      "current_bill": {
+        "name": "本期账单"
+      },
+      "balance": {
+        "name": "账户余额"
+      },
+      "last_reading": {
+        "name": "上期抄表读数"
+      },
+      "current_reading": {
+        "name": "本期抄表读数"
+      },
+      "usage": {
+        "name": "本期用水量"
+      },
+      "water_fee": {
+        "name": "本期水费"
+      },
+      "penalty": {
+        "name": "违约金"
+      },
+      "payable": {
+        "name": "本期应缴总额"
+      },
+      "last_read_date": {
+        "name": "上期抄表日"
+      },
+      "current_read_date": {
+        "name": "本期抄表日"
+      },
+      "history": {
+        "name": "抄表历史"
+      }
+    },
+    "binary_sensor": {
+      "has_arrears": {
+        "name": "欠费状态"
+      }
+    }
+  },
+  "exceptions": {
+    "login_expired": {
+      "message": "登录状态已失效，请在集成页面重新登录。"
+    }
+  }
+}

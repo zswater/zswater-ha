@@ -1,0 +1,17 @@
+{
+  "domain": "zswater",
+  "name": "Zhongshan Water (中山公用水务)",
+  "codeowners": [
+    "@zswater"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "http"
+  ],
+  "documentation": "https://github.com/zswater/zswater-ha",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/zswater/zswater-ha/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
