@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (C) 2026 zswater-ha contributors
+Copyright (c) 2026 zswater
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,14 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This project is an independent, unofficial client. It is not affiliated with,
-endorsed by, or supported by 中山公用水务投资有限公司 (Zhongshan Public Utilities
-Water Investment Co., Ltd.). "中山公用水务" and related marks belong to their
-respective owners.
-
-The Home Assistant integration structure borrows conventions from
-china_southern_power_grid_stat (https://github.com/windyboy/china_southern_power_grid_stat,
-GPL-3.0), which this project thanks for the reference architecture.
